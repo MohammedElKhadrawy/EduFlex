@@ -3,7 +3,6 @@ import * as Yup from "yup";
 import { useFormik } from "formik";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import SocialMediaLogin from "../SocialMediaLogin";
 import backImage from '../../assets/back.png';
 import authApi from "../../api/authApi";
 
@@ -171,7 +170,6 @@ const LoginForm = () => {
           </Link>
         </div>
       </div>
-      <SocialMediaLogin />
     </div>
   );
 };

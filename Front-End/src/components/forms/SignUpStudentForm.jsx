@@ -1,7 +1,6 @@
 import { useState } from "react";
 import * as Yup from "yup";
 import { useFormik } from "formik";
-import SocialMediaLogin from "../SocialMediaLogin";
 import { useNavigate } from "react-router-dom";
 import backImage from '../../assets/back.png';
 
@@ -322,7 +321,6 @@ const SignUpStudentForm = () => {
           {loading ? ". . ." : "Create account"}
         </button>
       </form>
-      <SocialMediaLogin />
     </div>
   );
 };

@@ -15,9 +15,9 @@ const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 
 // Swagger
-const swaggerUI = require("swagger-ui-express");
-const YAML = require('yamljs')
-const swaggerDocument = YAML.load('./swagger.yaml')
+const swaggerUI = require('swagger-ui-express');
+const YAML = require('yamljs');
+const swaggerDocument = YAML.load('./swagger.yaml');
 
 // routers
 const authRoutes = require('./routes/authRoutes');
@@ -39,7 +39,11 @@ app.use(
   })
 );
 
-app.use(helmet()); // helps secure Express apps by setting HTTP response headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false, // forced same-origin header that clashes with cors
+  })
+); // helps secure Express apps by setting HTTP response headers
 app.use(cors()); // to resolve cross-origin resource sharing with front-end
 app.use(xss()); // cross-site scripting protection
 app.use(mongoSanitize()); // to prevent mongo script injection
@@ -50,7 +54,7 @@ app.use(express.static(path.join(__dirname, 'public'))); // to statically serve 
 app.use(fileUpload());
 
 app.get('/', (req, res) => {
-  res.send('<h1>EduFlex API</h1><a href="/api-docs">Documentation</a>')
+  res.send('<h1>EduFlex API</h1><a href="/api-docs">Documentation</a>');
 });
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument));

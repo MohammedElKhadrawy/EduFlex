@@ -5,7 +5,6 @@ import { useDropzone } from "react-dropzone";
 
 import Id from "../../assets/id.png";
 import IdFilled from "../../assets/id-filled.png";
-import SocialMediaLogin from "../SocialMediaLogin";
 import { useNavigate } from "react-router-dom";
 import backImage from '../../assets/back.png';
 
@@ -286,7 +285,6 @@ const SignUpInstructorForm = () => {
           {loading ? ". . ." : "Create account"}
         </button>
       </form>
-      <SocialMediaLogin />
     </div>
   );
 };

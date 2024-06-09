@@ -99,9 +99,9 @@ const MainLayout = () => {
                     <p className="font-bold mx-[25%] sm:text-[1.7vw] text-[10px]">Follow us through</p>
                     <p className="mx-[25%] sm:mt-8 mt-4 sm:text-[1.2vw] text-[8px]">social media for the latest updates and to say connected</p>
                     <div className="w-[70%] mx-[30%] mt-8">
-                        <img src={xLogo} className="w-[20%] max-w-[35px] inline"/>
-                        <img src={faceLogo} className="w-[22%] max-w-[35px] ml-[20px] inline"/>
-                        <img src={instaLogo} className="w-[22%] max-w-[35px] ml-[20px] inline"/>
+                        <img src={xLogo} className="w-[20%] max-w-[35px] inline cursor-pointer hover:opacity-50"/>
+                        <img src={faceLogo} className="w-[22%] max-w-[35px] ml-[20px] inline cursor-pointer hover:opacity-50"/>
+                        <img src={instaLogo} className="w-[22%] max-w-[35px] ml-[20px] inline cursor-pointer hover:opacity-50"/>
                     </div>
                 </div>
                 <div>

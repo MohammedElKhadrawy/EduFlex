@@ -1,4 +1,5 @@
 import React from "react";
+import {Link} from "react-router-dom";
 
 const InstructorHome = () => {
 
@@ -38,7 +39,7 @@ const InstructorHome = () => {
             </div>
             <div className="bg-[#00BF63] h-200 grid grid-cols-4 text-center text-white font-bold text-[2vw] py-4">
                 <div>11M<br/>STUDENTS</div>
-                <div>100+<br/> INSTRACTOR</div>
+                <div>100+<br/> INSTRUCTOR</div>
                 <div>500<br/> ENROLLMENTS</div>
                 <div>20+<br/> COUNTRIES</div>
             </div>
@@ -50,11 +51,11 @@ const InstructorHome = () => {
                 <div className="mt-[60px] mb-[30px] w-[35%] h-[16px] m-auto bg-gradient-to-r from-[#D9D9D900] to-[#00BF63] rounded-[20px]"></div>
                 <p className="text-center text-[#3A3A3A] font-bold lg:text-[1.5vw] text-[16px]">Virtual (electronic) classes with all the tools you need!</p>
                 <p className="w-[70%] m-auto mt-5 font-[700] text-[#505050]">You can use all the tools in the simplest ways... explain and interact with your students while at home!</p>
-                <div className="aspect-[5/2] w-full bg-[#D9D9D9] rounded-[20px] mt-[40px] mb-[60px]"></div>
+                <img src="src/assets/inst_back4.PNG" className="aspect-[5/3] w-full bg-[#D9D9D9] rounded-[40px] mt-[40px] mb-[60px]"/>
                 <hr className="border-t-[2px] border-[#00000080]"/>
                 <img src="src/assets/inst_back3.PNG" className="w-full mt-[60px] mb-[100px]"/>
                 <hr className="border-t-[2px] border-[#00000080]"/>
-                <p className="text-center md:text-[2.25vw] text-[20px] font-bold mb-4">Top Rating For instractor</p>
+                <p className="text-center md:text-[2.25vw] text-[20px] font-bold mb-4">Top rated instructors</p>
                 <hr className="border-t-[8px] border-[#00BF63] m-auto min-w-[150px] w-[25%]"/>
                 <div className="my-10">
                     <div className="grid grid-cols-4 gap-4">
@@ -100,10 +101,13 @@ const InstructorHome = () => {
                         </div>
                     </div>
                     <div className="m-auto mt-5 w-[20%] cursor-pointer">
-                        <div className="bg-[#D9D9D9] aspect-square rounded-[30px] text-center pt-[15%] text-[2.25vw] font-bold">
-                            <p className="text-[4vw]">+</p>
-                            <p>JOIN</p>
+                        <Link to="/sign-up/instructor">
+                            <div className="bg-[#D9D9D9] aspect-square rounded-[30px] text-center pt-[15%] text-[2.25vw] font-bold">
+                                <p className="text-[4vw]">+</p>
+                                <p>JOIN</p>
                         </div>
+                        </Link>
+
                     </div>
                 </div>
                 <hr className="border-t-[2px] border-[#00000080]"/>
