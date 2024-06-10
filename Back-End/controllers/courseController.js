@@ -101,6 +101,17 @@ const createCourse = async (req, res, next) => {
     path.join(__dirname, '..', 'public', 'images', imageName)
   );
 
+  const { courseAvailability, limitedPeriod } = req.body;
+  if (courseAvailability === 'Limited' && !limitedPeriod) {
+    throwCustomError('Limited period is required for a limited course!', 400);
+  }
+  if (courseAvailability === 'Unlimited' && limitedPeriod) {
+    throwCustomError(
+      'Cannot specify limited period for an unlimited course!',
+      400
+    );
+  }
+
   const courseData = {
     ...req.body,
     imageUrl: `images/${imageName}`,
@@ -358,7 +369,11 @@ const updateSectionTitle = async (req, res, next) => {
     body: { sectionTitle },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   course.sections[sectionIndex].title = sectionTitle;
@@ -375,7 +390,11 @@ const deleteSectionFromCourse = async (req, res, next) => {
     user: { userId },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   // Remove all video references from this section before deleting it
@@ -399,7 +418,11 @@ const addVideoToSection = async (req, res, next) => {
   } = req;
 
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
 
@@ -468,12 +491,17 @@ const getVideo = async (req, res, next) => {
   }
 
   // check for section validity
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
 
   // check for video validity
   if (
+    !videoIndex ||
     videoIndex >= course.sections[sectionIndex].videos.length ||
     videoIndex < 0
   ) {
@@ -512,7 +540,22 @@ const getVideo = async (req, res, next) => {
         // compare current date with the expiration date
         const currentDate = new Date();
         if (currentDate > expirationDate) {
-          throwCustomError('course access has expired!', 403);
+          // pull the student from course enrollments
+          course.enrollments = course.enrollments.filter(
+            (enrollment) => !enrollment.studentId.equals(userId)
+          );
+          await course.save();
+
+          // push the course to student's wishlist
+          await User.findByIdAndUpdate(userId, {
+            $push: { wishList: courseId },
+          });
+
+          // throw an error for response
+          throwCustomError(
+            'course access has expired! it was automatically moved to your wishlist',
+            403
+          );
         }
       }
     }
@@ -558,10 +601,15 @@ const updateVideoInfo = async (req, res, next) => {
     body: { videoTitle, isPreview },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   if (
+    !videoIndex ||
     videoIndex >= course.sections[sectionIndex].videos.length ||
     videoIndex < 0
   ) {
@@ -582,10 +630,15 @@ const deleteVideo = async (req, res, next) => {
     user: { userId },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   if (
+    !videoIndex ||
     videoIndex >= course.sections[sectionIndex].videos.length ||
     videoIndex < 0
   ) {

@@ -25,8 +25,14 @@ router.get('/show-me', authenticateUser, userController.showCurrentUser);
 
 router
   .route('/wish-list')
-  .get(authenticateUser, userController.getWishList)
-  .patch(authenticateUser, userController.toggleWishListCourse);
+  .get(
+    [authenticateUser, authorizeRoles('Student')],
+    userController.getWishList
+  )
+  .patch(
+    [authenticateUser, authorizeRoles('Student')],
+    userController.toggleWishListCourse
+  );
 
 router.route('/:userId').get(authenticateUser, userController.getSingleUser);
 // temporarily disabled: Recursive issue + Fraud possibility
