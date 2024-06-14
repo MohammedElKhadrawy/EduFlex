@@ -9,7 +9,7 @@ require('dotenv').config();
 
 // security packages
 const cors = require('cors');
-const rateLimiter = require('express-rate-limit');
+// const rateLimiter = require('express-rate-limit');
 const helmet = require('helmet');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -32,12 +32,12 @@ const errorHandler = require('./middleware/error-handler');
 const app = express();
 
 app.set('trust proxy', 1);
-app.use(
-  rateLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 60, // Limit each IP to 60 requests per `window` (here, per 15 minutes)
-  })
-);
+// app.use(
+//   rateLimiter({
+//     windowMs: 15 * 60 * 1000, // 15 minutes
+//     limit: 60, // Limit each IP to 60 requests per `window` (here, per 15 minutes)
+//   })
+// );
 
 app.use(
   helmet({
