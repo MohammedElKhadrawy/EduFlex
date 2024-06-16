@@ -1,6 +1,10 @@
 const express = require('express');
 
-const { authenticateUser, authorizeRoles } = require('../middleware/auth');
+const {
+  authenticateUser,
+  authorizeRoles,
+  verifyTokenFromQuery,
+} = require('../middleware/auth');
 const courseController = require('../controllers/courseController');
 
 const router = express.Router();
@@ -22,7 +26,11 @@ router
   );
 
 // GET => /search-by-category?category=primary&level=1&term=1 for example
-router.get('/search-by-category', authenticateUser, courseController.searchCourses);
+router.get(
+  '/search-by-category',
+  authenticateUser,
+  courseController.searchCourses
+);
 
 // GET => /my-courses taught or enrolled (switch-case)
 router.get(
@@ -90,7 +98,7 @@ router
 
 router
   .route('/:courseId/sections/:sectionIndex/videos/:videoIndex')
-  .get(authenticateUser, courseController.getVideo)
+  .get(verifyTokenFromQuery, courseController.getVideo)
   // use this to update title and isPreview
   .patch(
     [authenticateUser, authorizeRoles('Instructor')],
