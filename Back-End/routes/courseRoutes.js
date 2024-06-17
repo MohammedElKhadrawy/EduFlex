@@ -25,6 +25,8 @@ router
     courseController.createCourse
   );
 
+router.get('/top-rated', courseController.getTopRatedCourses); // for homepage only
+
 // GET => /search-by-category?category=primary&level=1&term=1 for example
 router.get(
   '/search-by-category',

@@ -9,7 +9,7 @@ const router = express.Router();
 
 router
   .route('/')
-  .get(reviewController.getAllReviews)
+  .get(reviewController.getAllReviews) // use ?top=true for top reviews
   .post(
     [authenticateUser, authorizeRoles('Student')],
     [

@@ -127,6 +127,39 @@ const createCourse = async (req, res, next) => {
   });
 };
 
+const getTopRatedCourses = async (req, res, next) => {
+  const { category } = req.query;
+
+  const queryObj = { avgRating: { $gte: 4.5 } };
+
+  if (category) {
+    const categoryMap = {
+      primary: 'Primary stage',
+      middle: 'Middle school',
+      high: 'High school',
+      university: 'University',
+      skills: 'Graduated',
+    };
+
+    if (!Object.keys(categoryMap).includes(category)) {
+      throwCustomError('unsupported category', 400);
+    }
+
+    if (category === 'skills') {
+      queryObj.education = categoryMap[category];
+    } else {
+      queryObj.stage = categoryMap[category];
+    }
+  }
+
+  const topRatedCourses = await Course.find(queryObj)
+    .sort('-avgRating')
+    .select('title avgRating numOfReviews price instructor')
+    .populate('instructor', 'firstName lastName');
+
+  res.status(200).json({ topRatedCourses });
+};
+
 const searchCourses = async (req, res, next) => {
   const { category, level, term } = req.query;
 
@@ -712,6 +745,7 @@ const deleteVideo = async (req, res, next) => {
 module.exports = {
   getAllCourses,
   createCourse,
+  getTopRatedCourses,
   searchCourses,
   getCurrentUserCourses,
   getSingleCourse,
