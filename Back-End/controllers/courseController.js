@@ -130,7 +130,7 @@ const createCourse = async (req, res, next) => {
 const getTopRatedCourses = async (req, res, next) => {
   const { category } = req.query;
 
-  const queryObj = { avgRating: { $gte: 4.5 } };
+  const queryObj = { avgRating: { $gte: 4.5 }, status: 'Accepted' };
 
   if (category) {
     const categoryMap = {
@@ -154,7 +154,7 @@ const getTopRatedCourses = async (req, res, next) => {
 
   const topRatedCourses = await Course.find(queryObj)
     .sort('-avgRating')
-    .select('title avgRating numOfReviews price instructor')
+    .select('title avgRating numOfReviews price instructor imageUrl')
     .populate('instructor', 'firstName lastName');
 
   res.status(200).json({ topRatedCourses });
