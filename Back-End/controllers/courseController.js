@@ -183,28 +183,32 @@ const searchCourses = async (req, res, next) => {
     queryObj.stage = categoryMap[category];
   }
 
-  const levelMap = {
-    1: 'Level one',
-    2: 'Level two',
-    3: 'Level three',
-  };
+  if (level) {
+    const levelMap = {
+      1: 'Level one',
+      2: 'Level two',
+      3: 'Level three',
+    };
 
-  if (level && !Object.keys(levelMap).includes(level)) {
-    throwCustomError('Invalid level parameter.', 400);
+    if (!Object.keys(levelMap).includes(level)) {
+      throwCustomError('Invalid level parameter.', 400);
+    }
+
+    queryObj.level = levelMap[level];
   }
 
-  queryObj.level = levelMap[level];
+  if (term) {
+    const termMap = {
+      1: 'First term',
+      2: 'Second term',
+    };
 
-  const termMap = {
-    1: 'First term',
-    2: 'Second term',
-  };
+    if (!Object.keys(termMap).includes(term)) {
+      throwCustomError('Invalid term parameter.', 400);
+    }
 
-  if (term && !Object.keys(termMap).includes(term)) {
-    throwCustomError('Invalid term parameter.', 400);
+    queryObj.term = termMap[term];
   }
-
-  queryObj.term = termMap[term];
 
   queryObj.status = 'Accepted';
 
