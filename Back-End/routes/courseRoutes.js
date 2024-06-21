@@ -25,7 +25,15 @@ router
     courseController.createCourse
   );
 
-router.get('/top-rated', courseController.getTopRatedCourses); // for homepage only
+// GET => /top-rated for homepage only
+router.get('/top-rated', courseController.getTopRatedCourses);
+
+// GET => /personalized-courses to get student-specific courses in which they can enroll
+router.get(
+  '/personalized-courses',
+  [authenticateUser, authorizeRoles('Student')],
+  courseController.getPersonalizedCourses
+);
 
 // GET => /search-by-category?category=primary&level=1&term=1 for example
 router.get(

@@ -160,6 +160,37 @@ const getTopRatedCourses = async (req, res, next) => {
   res.status(200).json({ topRatedCourses });
 };
 
+const getPersonalizedCourses = async (req, res, next) => {
+  const { userId } = req.user;
+
+  const student = await User.findById(userId);
+  if (!student) {
+    throwCustomError(`No student with the ID of ${userId})`, 404);
+  }
+
+  // query the database for eligible courses
+  const { education, stage, level } = student;
+  const queryObj = {
+    education,
+    status: 'Accepted',
+  };
+
+  if (stage) {
+    queryObj.stage = stage;
+  }
+
+  if (level) {
+    queryObj.level = level;
+  }
+
+  const personalizedCourses = await Course.find(queryObj)
+    .sort('-avgRating')
+    .select('imageUrl title avgRating numOfReviews price instructor')
+    .populate('instructor', 'firstName lastName');
+
+  res.status(200).json({ personalizedCourses });
+};
+
 const searchCourses = async (req, res, next) => {
   const { category, level, term } = req.query;
 
@@ -331,13 +362,36 @@ const enrollInCourse = async (req, res, next) => {
   if (!course) {
     throwCustomError(`No course with the ID of ${courseId})`, 404);
   }
+  if (course.status !== 'Accepted') {
+    throwCustomError(
+      'Cannot enroll in a course that is not accepted by the admin.',
+      400
+    );
+  }
 
   const isEnrolled = course.enrollments.find((enrollment) =>
     enrollment.studentId.equals(userId)
   );
-
   if (isEnrolled) {
     throwCustomError('you are already enrolled in this course!', 400);
+  }
+
+  const student = await User.findById(userId);
+  if (!student) {
+    throwCustomError(`No student with the ID of ${userId})`, 404);
+  }
+
+  // check eligibility
+  const { education, stage, level } = student;
+  if (
+    education !== course.education ||
+    stage !== course.stage ||
+    level !== course.level
+  ) {
+    throwCustomError(
+      'You are not eligible to enroll in this course. Your education, stage, or level does not match the course requirements.',
+      400
+    );
   }
 
   // add student's id to course enrollments
@@ -345,9 +399,7 @@ const enrollInCourse = async (req, res, next) => {
   await course.save();
 
   // remove the course from user's wishlist
-  await User.findByIdAndUpdate(userId, {
-    $pull: { wishList: courseId },
-  });
+  await student.updateOne({ $pull: { wishList: courseId } });
 
   res.status(200).json({ message: 'successfully enrolled in the course!' });
 };
@@ -750,6 +802,7 @@ module.exports = {
   getAllCourses,
   createCourse,
   getTopRatedCourses,
+  getPersonalizedCourses,
   searchCourses,
   getCurrentUserCourses,
   getSingleCourse,
