@@ -42,11 +42,12 @@ router.get(
   courseController.searchCourses
 );
 
-// GET => /my-courses taught or enrolled (switch-case)
+// only admin gets to use ?userId={id} for any user's courses
+// GET => /user-courses taught or enrolled
 router.get(
-  '/my-courses',
-  [authenticateUser, authorizeRoles('Student', 'Instructor')],
-  courseController.getCurrentUserCourses
+  '/user-courses',
+  authenticateUser,
+  courseController.getSingleUserCourses
 );
 
 router

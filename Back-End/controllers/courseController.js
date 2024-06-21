@@ -252,23 +252,34 @@ const searchCourses = async (req, res, next) => {
 };
 
 // students get courses they enrolled in and instructors get courses they teach
-const getCurrentUserCourses = async (req, res, next) => {
-  const { userId, role } = req.user;
+// only admin gets to use the query parameter to get any user's courses
+const getSingleUserCourses = async (req, res, next) => {
+  const {
+    user: { userId: userIdFromToken, role },
+    query: { userId: userIdFromQuery },
+  } = req;
 
-  const queryObj = {};
-  switch (role) {
-    case 'Student':
-      queryObj['enrollments.studentId'] = userId;
-      break;
-    case 'Instructor':
-      queryObj['instructor'] = userId;
-      break;
+  if (role === 'Admin' && !userIdFromQuery) {
+    throwCustomError(
+      'Please provide the userId query parameter for which you want to get the courses!',
+      400
+    );
   }
+
+  if (role !== 'Admin' && userIdFromQuery) {
+    throwCustomError('Unauthorized to use this query parameter!', 403);
+  }
+
+  const personId = role === 'Admin' ? userIdFromQuery : userIdFromToken;
+
+  const queryObj = {
+    $or: [{ instructor: personId }, { 'enrollments.studentId': personId }],
+  };
 
   const courses = await Course.find(queryObj)
     .populate('instructor', 'firstName lastName')
     .sort('-createdAt'); // latest first
-  res.status(200).json({ courses });
+  res.status(200).json({ courses, coursesCount: courses.length });
 };
 
 const getSingleCourse = async (req, res, next) => {
@@ -804,7 +815,7 @@ module.exports = {
   getTopRatedCourses,
   getPersonalizedCourses,
   searchCourses,
-  getCurrentUserCourses,
+  getSingleUserCourses,
   getSingleCourse,
   updateCourse,
   enrollInCourse,
