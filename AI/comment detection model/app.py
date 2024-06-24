@@ -4,8 +4,10 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.models import model_from_json
 import pickle
 import os
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -58,5 +60,5 @@ def predict():
         return jsonify({"message": "rejected"})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True , port=5002)
 
