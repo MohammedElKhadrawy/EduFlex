@@ -1,6 +1,10 @@
 const express = require('express');
 
-const { authenticateUser, authorizeRoles } = require('../middleware/auth');
+const {
+  authenticateUser,
+  authorizeRoles,
+  verifyTokenFromQuery,
+} = require('../middleware/auth');
 const courseController = require('../controllers/courseController');
 
 const router = express.Router();
@@ -21,14 +25,29 @@ router
     courseController.createCourse
   );
 
-// GET => /search-by-category?category=primary&level=1&term=1 for example
-router.get('/search-by-category', authenticateUser, courseController.searchCourses);
+// GET => /top-rated for homepage only
+router.get('/top-rated', courseController.getTopRatedCourses);
 
-// GET => /my-courses taught or enrolled (switch-case)
+// GET => /personalized-courses to get student-specific courses in which they can enroll
 router.get(
-  '/my-courses',
-  [authenticateUser, authorizeRoles('Student', 'Instructor')],
-  courseController.getCurrentUserCourses
+  '/personalized-courses',
+  [authenticateUser, authorizeRoles('Student')],
+  courseController.getPersonalizedCourses
+);
+
+// GET => /search-by-category?category=primary&level=1&term=1 for example
+router.get(
+  '/search-by-category',
+  authenticateUser,
+  courseController.searchCourses
+);
+
+// only admin gets to use ?userId={id} for any user's courses
+// GET => /user-courses taught or enrolled
+router.get(
+  '/user-courses',
+  authenticateUser,
+  courseController.getSingleUserCourses
 );
 
 router
@@ -90,7 +109,7 @@ router
 
 router
   .route('/:courseId/sections/:sectionIndex/videos/:videoIndex')
-  .get(authenticateUser, courseController.getVideo)
+  .get(verifyTokenFromQuery, courseController.getVideo)
   // use this to update title and isPreview
   .patch(
     [authenticateUser, authorizeRoles('Instructor')],

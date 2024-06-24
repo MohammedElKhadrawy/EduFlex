@@ -101,6 +101,17 @@ const createCourse = async (req, res, next) => {
     path.join(__dirname, '..', 'public', 'images', imageName)
   );
 
+  const { courseAvailability, limitedPeriod } = req.body;
+  if (courseAvailability === 'Limited' && !limitedPeriod) {
+    throwCustomError('Limited period is required for a limited course!', 400);
+  }
+  if (courseAvailability === 'Unlimited' && limitedPeriod) {
+    throwCustomError(
+      'Cannot specify limited period for an unlimited course!',
+      400
+    );
+  }
+
   const courseData = {
     ...req.body,
     imageUrl: `images/${imageName}`,
@@ -114,6 +125,70 @@ const createCourse = async (req, res, next) => {
       "Course has been created successfully, and is now pending admin's approval!",
     course,
   });
+};
+
+const getTopRatedCourses = async (req, res, next) => {
+  const { category } = req.query;
+
+  const queryObj = { avgRating: { $gte: 4.5 }, status: 'Accepted' };
+
+  if (category) {
+    const categoryMap = {
+      primary: 'Primary stage',
+      middle: 'Middle school',
+      high: 'High school',
+      university: 'University',
+      skills: 'Graduated',
+    };
+
+    if (!Object.keys(categoryMap).includes(category)) {
+      throwCustomError('unsupported category', 400);
+    }
+
+    if (category === 'skills') {
+      queryObj.education = categoryMap[category];
+    } else {
+      queryObj.stage = categoryMap[category];
+    }
+  }
+
+  const topRatedCourses = await Course.find(queryObj)
+    .sort('-avgRating')
+    .select('title avgRating numOfReviews price instructor imageUrl')
+    .populate('instructor', 'firstName lastName');
+
+  res.status(200).json({ topRatedCourses });
+};
+
+const getPersonalizedCourses = async (req, res, next) => {
+  const { userId } = req.user;
+
+  const student = await User.findById(userId);
+  if (!student) {
+    throwCustomError(`No student with the ID of ${userId})`, 404);
+  }
+
+  // query the database for eligible courses
+  const { education, stage, level } = student;
+  const queryObj = {
+    education,
+    status: 'Accepted',
+  };
+
+  if (stage) {
+    queryObj.stage = stage;
+  }
+
+  if (level) {
+    queryObj.level = level;
+  }
+
+  const personalizedCourses = await Course.find(queryObj)
+    .sort('-avgRating')
+    .select('imageUrl title avgRating numOfReviews price instructor')
+    .populate('instructor', 'firstName lastName');
+
+  res.status(200).json({ personalizedCourses });
 };
 
 const searchCourses = async (req, res, next) => {
@@ -139,28 +214,32 @@ const searchCourses = async (req, res, next) => {
     queryObj.stage = categoryMap[category];
   }
 
-  const levelMap = {
-    1: 'Level one',
-    2: 'Level two',
-    3: 'Level three',
-  };
+  if (level) {
+    const levelMap = {
+      1: 'Level one',
+      2: 'Level two',
+      3: 'Level three',
+    };
 
-  if (level && !Object.keys(levelMap).includes(level)) {
-    throwCustomError('Invalid level parameter.', 400);
+    if (!Object.keys(levelMap).includes(level)) {
+      throwCustomError('Invalid level parameter.', 400);
+    }
+
+    queryObj.level = levelMap[level];
   }
 
-  queryObj.level = levelMap[level];
+  if (term) {
+    const termMap = {
+      1: 'First term',
+      2: 'Second term',
+    };
 
-  const termMap = {
-    1: 'First term',
-    2: 'Second term',
-  };
+    if (!Object.keys(termMap).includes(term)) {
+      throwCustomError('Invalid term parameter.', 400);
+    }
 
-  if (term && !Object.keys(termMap).includes(term)) {
-    throwCustomError('Invalid term parameter.', 400);
+    queryObj.term = termMap[term];
   }
-
-  queryObj.term = termMap[term];
 
   queryObj.status = 'Accepted';
 
@@ -173,23 +252,34 @@ const searchCourses = async (req, res, next) => {
 };
 
 // students get courses they enrolled in and instructors get courses they teach
-const getCurrentUserCourses = async (req, res, next) => {
-  const { userId, role } = req.user;
+// only admin gets to use the query parameter to get any user's courses
+const getSingleUserCourses = async (req, res, next) => {
+  const {
+    user: { userId: userIdFromToken, role },
+    query: { userId: userIdFromQuery },
+  } = req;
 
-  const queryObj = {};
-  switch (role) {
-    case 'Student':
-      queryObj['enrollments.studentId'] = userId;
-      break;
-    case 'Instructor':
-      queryObj['instructor'] = userId;
-      break;
+  if (role === 'Admin' && !userIdFromQuery) {
+    throwCustomError(
+      'Please provide the userId query parameter for which you want to get the courses!',
+      400
+    );
   }
+
+  if (role !== 'Admin' && userIdFromQuery) {
+    throwCustomError('Unauthorized to use this query parameter!', 403);
+  }
+
+  const personId = role === 'Admin' ? userIdFromQuery : userIdFromToken;
+
+  const queryObj = {
+    $or: [{ instructor: personId }, { 'enrollments.studentId': personId }],
+  };
 
   const courses = await Course.find(queryObj)
     .populate('instructor', 'firstName lastName')
     .sort('-createdAt'); // latest first
-  res.status(200).json({ courses });
+  res.status(200).json({ courses, coursesCount: courses.length });
 };
 
 const getSingleCourse = async (req, res, next) => {
@@ -283,13 +373,36 @@ const enrollInCourse = async (req, res, next) => {
   if (!course) {
     throwCustomError(`No course with the ID of ${courseId})`, 404);
   }
+  if (course.status !== 'Accepted') {
+    throwCustomError(
+      'Cannot enroll in a course that is not accepted by the admin.',
+      400
+    );
+  }
 
   const isEnrolled = course.enrollments.find((enrollment) =>
     enrollment.studentId.equals(userId)
   );
-
   if (isEnrolled) {
     throwCustomError('you are already enrolled in this course!', 400);
+  }
+
+  const student = await User.findById(userId);
+  if (!student) {
+    throwCustomError(`No student with the ID of ${userId})`, 404);
+  }
+
+  // check eligibility
+  const { education, stage, level } = student;
+  if (
+    education !== course.education ||
+    stage !== course.stage ||
+    level !== course.level
+  ) {
+    throwCustomError(
+      'You are not eligible to enroll in this course. Your education, stage, or level does not match the course requirements.',
+      400
+    );
   }
 
   // add student's id to course enrollments
@@ -297,9 +410,7 @@ const enrollInCourse = async (req, res, next) => {
   await course.save();
 
   // remove the course from user's wishlist
-  await User.findByIdAndUpdate(userId, {
-    $pull: { wishList: courseId },
-  });
+  await student.updateOne({ $pull: { wishList: courseId } });
 
   res.status(200).json({ message: 'successfully enrolled in the course!' });
 };
@@ -358,7 +469,11 @@ const updateSectionTitle = async (req, res, next) => {
     body: { sectionTitle },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   course.sections[sectionIndex].title = sectionTitle;
@@ -375,7 +490,11 @@ const deleteSectionFromCourse = async (req, res, next) => {
     user: { userId },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   // Remove all video references from this section before deleting it
@@ -399,7 +518,11 @@ const addVideoToSection = async (req, res, next) => {
   } = req;
 
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
 
@@ -468,12 +591,17 @@ const getVideo = async (req, res, next) => {
   }
 
   // check for section validity
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
 
   // check for video validity
   if (
+    !videoIndex ||
     videoIndex >= course.sections[sectionIndex].videos.length ||
     videoIndex < 0
   ) {
@@ -512,7 +640,22 @@ const getVideo = async (req, res, next) => {
         // compare current date with the expiration date
         const currentDate = new Date();
         if (currentDate > expirationDate) {
-          throwCustomError('course access has expired!', 403);
+          // pull the student from course enrollments
+          course.enrollments = course.enrollments.filter(
+            (enrollment) => !enrollment.studentId.equals(userId)
+          );
+          await course.save();
+
+          // push the course to student's wishlist
+          await User.findByIdAndUpdate(userId, {
+            $push: { wishList: courseId },
+          });
+
+          // throw an error for response
+          throwCustomError(
+            'course access has expired! it was automatically moved to your wishlist',
+            403
+          );
         }
       }
     }
@@ -558,10 +701,15 @@ const updateVideoInfo = async (req, res, next) => {
     body: { videoTitle, isPreview },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   if (
+    !videoIndex ||
     videoIndex >= course.sections[sectionIndex].videos.length ||
     videoIndex < 0
   ) {
@@ -582,10 +730,15 @@ const deleteVideo = async (req, res, next) => {
     user: { userId },
   } = req;
   const course = await checkCoursePermissions(courseId, userId);
-  if (sectionIndex >= course.sections.length || sectionIndex < 0) {
+  if (
+    !sectionIndex ||
+    sectionIndex >= course.sections.length ||
+    sectionIndex < 0
+  ) {
     throwCustomError('Invalid Section Index!', 400);
   }
   if (
+    !videoIndex ||
     videoIndex >= course.sections[sectionIndex].videos.length ||
     videoIndex < 0
   ) {
@@ -659,8 +812,10 @@ const deleteVideo = async (req, res, next) => {
 module.exports = {
   getAllCourses,
   createCourse,
+  getTopRatedCourses,
+  getPersonalizedCourses,
   searchCourses,
-  getCurrentUserCourses,
+  getSingleUserCourses,
   getSingleCourse,
   updateCourse,
   enrollInCourse,

@@ -3,6 +3,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 const User = require('../models/User');
+const Course = require('../models/Course');
 const throwCustomError = require('../errors/custom-error');
 const {
   createTokenUser,
@@ -157,6 +158,19 @@ const toggleWishListCourse = async (req, res, next) => {
     user: { userId },
   } = req;
 
+  // check for enrollment before proceeding with the wishlist logic
+  const course = await Course.findById(courseId);
+  const isEnrolled = course.enrollments.find((enrollment) =>
+    enrollment.studentId.equals(userId)
+  );
+  if (isEnrolled) {
+    throwCustomError(
+      'A course in which you are enrolled cannot be added to your wishlist after enrollment.',
+      400
+    );
+  }
+
+  // check for course existence in the wishlist
   const user = await User.findById(userId);
   const alreadyExists = user.wishList.find((courseRef) =>
     courseRef.equals(courseId)

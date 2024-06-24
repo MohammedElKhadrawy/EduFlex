@@ -25,8 +25,16 @@ const createReview = async (req, res, next) => {
 };
 
 const getAllReviews = async (req, res, next) => {
-  const reviews = await Review.find().populate([
-    { path: 'course', select: ['title subject'] },
+  const { top } = req.query;
+
+  const queryObj = {};
+  
+  if (top) {
+    queryObj.rating = { $gte: 4.5 };
+  }
+
+  const reviews = await Review.find(queryObj).sort('-rating').populate([
+    { path: 'course', select: ['title', 'subject'] },
     { path: 'user', select: ['firstName', 'lastName', 'profilePicture'] },
   ]);
   // .populate('user', 'firstName'); // just to know that we can chain populate multiple times, one field at a time
@@ -36,7 +44,7 @@ const getAllReviews = async (req, res, next) => {
 const getSingleReview = async (req, res, next) => {
   const { reviewId } = req.params;
   const review = await Review.findById(reviewId).populate([
-    { path: 'course', select: ['title subject'] },
+    { path: 'course', select: ['title', 'subject'] },
     { path: 'user', select: ['firstName', 'lastName', 'profilePicture'] },
   ]);
   if (!review) {
