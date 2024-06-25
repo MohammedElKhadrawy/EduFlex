@@ -1,5 +1,7 @@
 const path = require('path');
+const fs = require('fs').promises;
 
+const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
 const User = require('../models/User');
@@ -42,6 +44,7 @@ const register = async (req, res, next) => {
   // }
 
   // handling required field for instructor role
+  let imagePath;
   if (role === 'Instructor') {
     if (!req.files) {
       throwCustomError('No file uploaded', 400);
@@ -58,7 +61,8 @@ const register = async (req, res, next) => {
     }
 
     const imageName = uuidv4() + '-' + nationalIdImage.name;
-    await nationalIdImage.mv(path.join(__dirname, '..', 'private', imageName));
+    imagePath = path.join(__dirname, '..', 'private', imageName);
+    await nationalIdImage.mv(imagePath);
 
     req.body.nationalID = `private/${imageName}`;
   }
@@ -80,17 +84,37 @@ const register = async (req, res, next) => {
   // generate OTP with expiration time of 1 hr
   const { otp, otpExpiration } = generateOTP(3600000);
 
-  const user = await User.create({ ...req.body, otp, otpExpiration });
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  await sendVerificationEmail({
-    name: user.firstName,
-    email: user.email,
-    otp,
-  });
+  try {
+    const user = await User.create([{ ...req.body, otp, otpExpiration }], {
+      session,
+    });
 
-  res.status(201).json({
-    message: 'Success! Please check your email to verify account',
-  });
+    await sendVerificationEmail({
+      name: user.firstName,
+      email: user.email,
+      otp,
+    });
+
+    await session.commitTransaction();
+
+    res.status(201).json({
+      message: 'Success! Please check your email to verify account',
+    });
+  } catch (error) {
+    // abort transaction
+    await session.abortTransaction();
+
+    // make sure the idImage was deleted
+    if (imagePath) await fs.unlink(imagePath);
+
+    // forward error to the global error-handling middleware
+    next(error);
+  } finally {
+    session.endSession();
+  }
 };
 
 const verifyEmail = async (req, res, next) => {
@@ -131,19 +155,33 @@ const resendOTP = async (req, res, next) => {
   // generate OTP with expiration time of 1 hr
   const { otp, otpExpiration } = generateOTP(3600000);
 
-  user.otp = otp;
-  user.otpExpiration = otpExpiration;
-  await user.save();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // Send new OTP via email
-  await sendVerificationEmail({
-    name: user.firstName,
-    email: user.email,
-    otp,
-    resend: true,
-  });
+  try {
+    user.otp = otp;
+    user.otpExpiration = otpExpiration;
+    await user.save({ session });
 
-  res.status(200).json({ message: 'New OTP sent successfully.' });
+    // Send new OTP via email
+    await sendVerificationEmail({
+      name: user.firstName,
+      email: user.email,
+      otp,
+      resend: true,
+    });
+
+    await session.commitTransaction();
+
+    res.status(200).json({ message: 'New OTP sent successfully.' });
+  } catch (error) {
+    // abort transaction
+    await session.abortTransaction();
+    // forward error to the global error-handling middleware
+    next(error);
+  } finally {
+    session.endSession();
+  }
 };
 
 const login = async (req, res, next) => {
@@ -186,27 +224,41 @@ const forgotPassword = async (req, res, next) => {
   const user = await User.findOne({ email });
 
   if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+    throwCustomError('Could not find a user with this E-mail', 404);
   }
 
   // generate resetPwOtp with expiration time of 10 mins = 10 * 60 * 1000 ms
   const { otp: resetPwOtp, otpExpiration: resetPwOtpExpiration } =
     generateOTP(600000);
 
-  user.resetPwOtp = resetPwOtp;
-  user.resetPwOtpExpiration = resetPwOtpExpiration;
-  await user.save();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // Send resetPwOtp via email
-  await sendResetPasswordEmail({
-    name: user.firstName,
-    email: user.email,
-    resetPwOtp,
-  });
+  try {
+    user.resetPwOtp = resetPwOtp;
+    user.resetPwOtpExpiration = resetPwOtpExpiration;
+    await user.save({ session });
 
-  res
-    .status(200)
-    .json({ message: 'Please check your email for reset password otp' });
+    // Send resetPwOtp via email
+    await sendResetPasswordEmail({
+      name: user.firstName,
+      email: user.email,
+      resetPwOtp,
+    });
+
+    await session.commitTransaction();
+
+    res
+      .status(200)
+      .json({ message: 'Please check your email for reset password otp' });
+  } catch (error) {
+    // abort transaction
+    await session.abortTransaction();
+    // forward error to the global error-handling middleware
+    next(error);
+  } finally {
+    session.endSession();
+  }
 };
 
 const resetPassword = async (req, res, next) => {
@@ -218,20 +270,34 @@ const resetPassword = async (req, res, next) => {
   const user = await User.findOne({ email });
 
   if (!user) {
-    return res.status(404).json({ message: 'User not found' });
+    throwCustomError('Could not find a user with this E-mail', 404);
   }
 
   verifyOTP({ user, otp: resetPwOtp, reset: true });
 
-  // Update user's password and clear OTP fields
-  user.password = newPassword; // hashing is done pre-save in userSchema
-  user.resetPwOtp = undefined;
-  user.resetPwOtpExpiration = undefined;
-  await user.save();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  await sendAcknowledgementEmail({ name: user.firstName, email: user.email });
+  try {
+    // Update user's password and clear OTP fields
+    user.password = newPassword; // hashing is done pre-save in userSchema
+    user.resetPwOtp = undefined;
+    user.resetPwOtpExpiration = undefined;
+    await user.save({ session });
 
-  return res.status(200).json({ message: 'Password updated successfully' });
+    await sendAcknowledgementEmail({ name: user.firstName, email: user.email });
+
+    await session.commitTransaction();
+
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (error) {
+    // abort transaction
+    await session.abortTransaction();
+    // forward error to the global error-handling middleware
+    next(error);
+  } finally {
+    session.endSession();
+  }
 };
 
 // old approach using stand-alone endpoint for file upload

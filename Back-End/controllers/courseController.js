@@ -500,7 +500,7 @@ const deleteSectionFromCourse = async (req, res, next) => {
   // Remove all video references from this section before deleting it
   for (const video of course.sections[sectionIndex].videos) {
     const videoPath = path.join(__dirname, '..', video.videoUrl);
-    fs.unlinkSync(videoPath);
+    await fs.promises.unlink(videoPath);
   }
   course.sections.splice(sectionIndex, 1);
   await course.save();
@@ -551,7 +551,7 @@ const addVideoToSection = async (req, res, next) => {
 
   // Check if resolution meets requirements (480p or higher)
   if (width < 854 || height < 480) {
-    fs.unlinkSync(videoPath);
+    await fs.promises.unlink(videoPath);
     throwCustomError(
       'Video resolution must be higher than or equal to 854x480p',
       400
@@ -749,7 +749,7 @@ const deleteVideo = async (req, res, next) => {
   // Construct the full path
   const videoPath = path.join(__dirname, '..', videoUrl);
   // Delete the file from server directory
-  fs.unlinkSync(videoPath);
+  await fs.promises.unlink(videoPath);
   // Remove the video object from array and save to db
   course.sections[sectionIndex].videos.splice(videoIndex, 1);
   await course.save();

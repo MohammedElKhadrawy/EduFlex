@@ -108,6 +108,9 @@ const updateUser = async (req, res, next) => {
   // });
 
   const user = await User.findById(userId);
+  if (!user) {
+    throwCustomError(`Could not find a user with ID: ${userId}`, 404);
+  }
   for (const key in updatedFields) {
     user[key] = updatedFields[key];
   }
@@ -129,6 +132,9 @@ const updateUserPassword = async (req, res, next) => {
     user: { userId },
   } = req;
   const user = await User.findById(userId);
+  if (!user) {
+    throwCustomError(`Could not find a user with ID: ${userId}`, 404);
+  }
   const isPasswordCorrect = await user.checkPassword(currentPassword);
   if (!isPasswordCorrect) {
     throwCustomError('wrong current password', 401);
@@ -149,6 +155,11 @@ const getWishList = async (req, res, next) => {
         select: ['firstName', 'lastName'],
       },
     });
+
+  if (!user) {
+    throwCustomError(`Could not find a user with ID: ${userId}`, 404);
+  }
+
   res.status(200).json({ wishList: user.wishList });
 };
 
@@ -158,8 +169,12 @@ const toggleWishListCourse = async (req, res, next) => {
     user: { userId },
   } = req;
 
-  // check for enrollment before proceeding with the wishlist logic
   const course = await Course.findById(courseId);
+  if (!course) {
+    throwCustomError(`Could not find a course with ID: ${courseId}`, 404);
+  }
+
+  // check for enrollment before proceeding with the wishlist logic
   const isEnrolled = course.enrollments.find((enrollment) =>
     enrollment.studentId.equals(userId)
   );
@@ -170,8 +185,12 @@ const toggleWishListCourse = async (req, res, next) => {
     );
   }
 
-  // check for course existence in the wishlist
   const user = await User.findById(userId);
+  if (!user) {
+    throwCustomError(`Could not find a user with ID: ${userId}`, 404);
+  }
+  
+  // check for course existence in the wishlist
   const alreadyExists = user.wishList.find((courseRef) =>
     courseRef.equals(courseId)
   );
@@ -214,6 +233,10 @@ const updateProfilePicture = async (req, res, next) => {
   const { userId } = req.user;
 
   const user = await User.findById(userId);
+  if (!user) {
+    throwCustomError(`Could not find a user with ID: ${userId}`, 404);
+  }
+
   user.profilePicture = `images/${imageName}`;
   await user.save();
 
