@@ -2,8 +2,10 @@ from flask import Flask, request, jsonify
 import cv2
 import numpy as np
 import easyocr
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 def word_detect(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -95,4 +97,4 @@ def detect_text():
         return jsonify({"success": False, "message": "Not a valid ID card"}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True , port=5001)
