@@ -88,7 +88,7 @@ const register = async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const user = await User.create([{ ...req.body, otp, otpExpiration }], {
+    const [user] = await User.create([{ ...req.body, otp, otpExpiration }], {
       session,
     });
 

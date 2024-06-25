@@ -1,4 +1,5 @@
 const { Schema, model } = require('mongoose');
+const mongooseDelete = require('mongoose-delete');
 
 const reviewSchema = new Schema(
   {
@@ -58,6 +59,11 @@ reviewSchema.post('save', async function () {
 
 reviewSchema.post('deleteOne', { document: true }, async function () {
   await this.constructor.calculateCourseStats(this.course);
+});
+
+reviewSchema.plugin(mongooseDelete, {
+  overrideMethods: true,
+  deletedAt: true,
 });
 
 module.exports = model('Review', reviewSchema);

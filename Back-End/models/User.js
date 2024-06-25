@@ -1,4 +1,5 @@
 const { Schema, model } = require('mongoose');
+const mongooseDelete = require('mongoose-delete');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new Schema(
@@ -87,5 +88,10 @@ userSchema.methods.checkPassword = async function (enteredPassword) {
   const doesMatch = await bcrypt.compare(enteredPassword, this.password);
   return doesMatch;
 };
+
+userSchema.plugin(mongooseDelete, {
+  overrideMethods: true,
+  deletedAt: true,
+});
 
 module.exports = model('User', userSchema);

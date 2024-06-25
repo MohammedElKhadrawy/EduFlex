@@ -165,7 +165,7 @@ const getPersonalizedCourses = async (req, res, next) => {
 
   const student = await User.findById(userId);
   if (!student) {
-    throwCustomError(`No student with the ID of ${userId})`, 404);
+    throwCustomError(`No student with the ID of ${userId}`, 404);
   }
 
   // query the database for eligible courses
@@ -389,15 +389,15 @@ const enrollInCourse = async (req, res, next) => {
 
   const student = await User.findById(userId);
   if (!student) {
-    throwCustomError(`No student with the ID of ${userId})`, 404);
+    throwCustomError(`No student with the ID of ${userId}`, 404);
   }
 
   // check eligibility
   const { education, stage, level } = student;
   if (
     education !== course.education ||
-    stage !== course.stage ||
-    level !== course.level
+    (stage && stage !== course.stage) ||
+    (level && level !== course.level)
   ) {
     throwCustomError(
       'You are not eligible to enroll in this course. Your education, stage, or level does not match the course requirements.',

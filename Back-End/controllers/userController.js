@@ -3,6 +3,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 const User = require('../models/User');
+const Review = require('../models/Review');
 const Course = require('../models/Course');
 const throwCustomError = require('../errors/custom-error');
 const {
@@ -77,6 +78,31 @@ const getSingleUser = async (req, res, next) => {
 //   await user.deleteOne();
 //   res.status(200).json({ message: 'User has been deleted successfully!' });
 // };
+
+const deleteUser = async (req, res, next) => {
+  const {
+    params: { userId },
+    user: { role },
+  } = req;
+
+  // protect Admin account from being deleted by mistake
+  if (role === 'Admin' && req.user.userId === userId) {
+    throwCustomError('Bad request! Admin account cannot be deleted', 400);
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throwCustomError(`Could not find a user with ID: ${userId}`, 404);
+  }
+
+  if (user.role === 'Student') await Review.delete({ user: userId });
+
+  if (user.role === 'Instructor') await Course.delete({ instructor: userId });
+
+  await User.deleteById(userId);
+
+  res.status(200).json({ message: 'User has been deleted successfully!' });
+};
 
 const updateUser = async (req, res, next) => {
   collectValidationResult(req);
@@ -189,7 +215,7 @@ const toggleWishListCourse = async (req, res, next) => {
   if (!user) {
     throwCustomError(`Could not find a user with ID: ${userId}`, 404);
   }
-  
+
   // check for course existence in the wishlist
   const alreadyExists = user.wishList.find((courseRef) =>
     courseRef.equals(courseId)
@@ -249,7 +275,7 @@ module.exports = {
   getAllUsers,
   showCurrentUser,
   getSingleUser,
-  // deleteUser,
+  deleteUser,
   updateUser,
   updateUserPassword,
   getWishList,

@@ -1,4 +1,5 @@
 const { Schema, model } = require('mongoose');
+const mongooseDelete = require('mongoose-delete');
 
 const Review = require('./Review');
 
@@ -160,6 +161,11 @@ courseSchema.virtual('reviews', {
 // before it gets deleted so a pre-deleteOne hook
 courseSchema.pre('deleteOne', { document: true }, async function () {
   await Review.deleteMany({ course: this._id });
+});
+
+courseSchema.plugin(mongooseDelete, {
+  overrideMethods: true,
+  deletedAt: true,
 });
 
 module.exports = model('Course', courseSchema);

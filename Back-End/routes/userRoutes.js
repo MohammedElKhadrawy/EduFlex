@@ -34,7 +34,14 @@ router
     userController.toggleWishListCourse
   );
 
-router.route('/:userId').get(authenticateUser, userController.getSingleUser);
+router
+  .route('/:userId')
+  .get(authenticateUser, userController.getSingleUser)
+  .delete(
+    [authenticateUser, authorizeRoles('Admin')],
+    userController.deleteUser
+  );
+  
 // temporarily disabled: Recursive issue + Fraud possibility
 // .delete(
 //   authenticateUser,
