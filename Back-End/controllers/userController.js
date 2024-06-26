@@ -266,9 +266,16 @@ const updateProfilePicture = async (req, res, next) => {
   user.profilePicture = `images/${imageName}`;
   await user.save();
 
+  const tokenUser = createTokenUser(user);
+  const token = generateJWT(tokenUser); // Front-End should replace the old token with the updated one
+
   res
     .status(200)
-    .json({ message: 'Profile picture has been updated successfully' });
+    .json({
+      message: 'Profile picture has been updated successfully',
+      user: tokenUser,
+      token,
+    });
 };
 
 module.exports = {
