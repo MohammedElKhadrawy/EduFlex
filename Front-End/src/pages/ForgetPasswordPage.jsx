@@ -4,6 +4,10 @@ import { useNavigate } from "react-router-dom";
 import * as Yup from "yup";
 import backImage from '../assets/back.png';
 
+const delay = ms => new Promise(
+    resolve => setTimeout(resolve, ms)
+);
+
 const ForgetPasswordPage = () => {
   const navigate = useNavigate();
 
@@ -24,10 +28,46 @@ const ForgetPasswordPage = () => {
         .required("Please enter your Email"),
     }),
     onSubmit: (values) => {
-      console.log(values);
       setLoading(true);
       localStorage.setItem("email", values.email);
-      navigate("/verification");
+      const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values)
+      };
+      const back_end_url=import.meta.env.VITE_BACK_END_URL;
+      const restorePassword = async () => {
+        try {
+          const response = await fetch(back_end_url+'/auth/forgot-password', requestOptions);
+          const data = await response.json();
+          if(response.status ===422||response.status ===404){
+            Swal.fire({
+              icon: "error",
+              title: "Oops: "+data.message+" ...",
+              text: data.data[0],
+            });
+          }else if(response.status ===200){
+            Swal.fire({
+              icon: "success",
+              title: "Great ...",
+              text: data.message+" .. you will be redirect to verification in 5 seconds",
+            });
+            await delay(5000);
+            localStorage.setItem("email", values.email);
+            localStorage.setItem("resetPassword", "yes");
+            navigate("/verification");
+          }
+
+        } catch (error) {
+          Swal.fire({
+            icon: "error",
+            title: "Oops: Server error ...",
+            text: "User not found",
+          });
+          console.error('Error:', error);
+        }
+      };
+      restorePassword();
       setTimeout(() => {
         setLoading(false);
       }, 1000);

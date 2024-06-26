@@ -4,7 +4,11 @@ import { useFormik } from "formik";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import backImage from '../../assets/back.png';
-import authApi from "../../api/authApi";
+
+function getCookie(key) {
+  var b = document.cookie.match("(^|;)\\s*" + key + "\\s*=\\s*([^;]+)");
+  return b ? b.pop() : "";
+}
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -34,17 +38,82 @@ const LoginForm = () => {
         .required("Please enter your Email"),
       password: Yup.string().required("Please provide your Password"),
     }),
-    onSubmit: async (values) => {
-      setLoading(true);
+    onSubmit: (values) => {
+      const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values)
+      };
+      const back_end_url=import.meta.env.VITE_BACK_END_URL;
+      const LoginUser = async () => {
+        try {
+          const response = await fetch(back_end_url+'/auth/login', requestOptions);
+          const data = await response.json();
+          if(response.status ===401){
+            Swal.fire({
+              icon: "error",
+              title: "Oops: "+data.message+" ...",
+              text: data.data[0],
+            });
+          }else if(response.status ===200){
+            document.cookie="token="+data.token+"; path=/";
+            const fetchUserData = async () => {
+              try {
+                const requestOptions = {
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+data.token,
+                  }
+                };
+                const back_end_url=import.meta.env.VITE_BACK_END_URL;
 
-      // api request look alike
+                const response = await fetch(back_end_url+'/users/show-me',requestOptions)
+                const result = await response.json();
+                if(response.status===200){
+                  document.cookie="user="+JSON.stringify(result.user)+"; path=/";
+                }else if(response.status===401){
+                  Swal.fire({
+                    icon: "error",
+                    title: "Oops: "+data.message+" ...",
+                    text: data.data[0],
+                  });
+                }
+              } catch (error) {
+                Swal.fire({
+                  icon: "error",
+                  title: "Oops: Server error ...",
+                  text: error,
+                });
+              }
+            };
+            fetchUserData();
+            setTimeout(function (){
+              let user=JSON.parse(getCookie('user'));
+              if(user){
+                if(user.role==="Student"){
+                  navigate("/");
+                }
+                if(user.role==="Instructor"){
+                  navigate("/instructor/home");
+                }
+                if(user.role==="Admin"){
+                  navigate("/admin/requests");
+                }
+              }
+            },1000);
 
-      // const res = await authApi.login(values);
-      // console.log(res);
+          }
 
-      setTimeout(() => {
-        setLoading(false);
-      }, 1000);
+        } catch (error) {
+          Swal.fire({
+            icon: "error",
+            title: "Oops: Server error ...",
+            text: "Wrong password! try again or click forgot password to reset it.",
+          });
+        }
+      };
+      LoginUser();
     },
   });
   return (
