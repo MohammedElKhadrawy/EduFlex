@@ -7,9 +7,10 @@ import LoginPage from "./pages/LoginPage";
 import StudentSignUpPage from "./pages/StudentSignUpPage";
 import InstructorSignUpPage from "./pages/InstructorSignUpPage";
 import VerificationPage from "./pages/VerificationPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ForgotPasswordPage from "./pages/ForgetPasswordPage";
 import StudentHome from "./pages/StudentHomePage";
 import StudentCourseView from "./pages/StudentCourseViewPage";
+import CoursesView from "./pages/CoursesViewPage";
 import StudentVideoView from "./pages/StudentVideoViewPage";
 import StudentRating from  "./pages/StudentRatingPage"
 import StudentCourses from "./pages/StudentCoursesPage";
@@ -23,6 +24,7 @@ import AdminRequests from "./pages/AdminRequestsPage";
 import AdminStudents from "./pages/AdminStudentsPage";
 import AdminInstructors from "./pages/AdminInstructorsPage";
 import AdminCourses from "./pages/AdminCoursesPage";
+import AdminUserCourses from "./pages/AdminUserCoursesPage";
 
 function App() {
     return (
@@ -33,6 +35,11 @@ function App() {
                     <Route
                         path="/"
                         element={<StudentHome/>}
+                    >
+                    </Route>
+                    <Route
+                        path="/courses"
+                        element={<CoursesView/>}
                     >
                     </Route>
                     <Route
@@ -93,7 +100,7 @@ function App() {
                     ></Route>
                     <Route path="verification" element={<VerificationPage/>}></Route>
                     <Route
-                        path="forgot-password"
+                        path="/forgot-password"
                         element={<ForgotPasswordPage/>}
                     ></Route>
                 </Route>
@@ -117,6 +124,11 @@ function App() {
                     <Route
                         path="/admin/courses"
                         element={<AdminCourses/>}
+                    >
+                    </Route>
+                    <Route
+                        path="/admin/user-courses"
+                        element={<AdminUserCourses/>}
                     >
                     </Route>
                 </Route>

@@ -7,6 +7,8 @@ import Id from "../../assets/id.png";
 import IdFilled from "../../assets/id-filled.png";
 import { useNavigate } from "react-router-dom";
 import backImage from '../../assets/back.png';
+import {delay,swAlert} from "../../helpers";
+
 
 const SignUpInstructorForm = () => {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ const SignUpInstructorForm = () => {
       password: "",
       confirmPassword: "",
       file: [],
+      role: "Instructor",
     },
     validationSchema: Yup.object({
       firstName: Yup.string().required("Please enter your first name"),
@@ -55,8 +58,62 @@ const SignUpInstructorForm = () => {
         ),
     }),
     onSubmit: (values) => {
-      localStorage.setItem("email", values.email);
-      navigate("/verification");
+    
+      const dataAI = new FormData();
+      dataAI.append('image',files);
+
+      const back_end_url=import.meta.env.VITE_BACK_END_URL;
+      const ai_url=import.meta.env.VITE_AI_ID;
+      const registerUser = async () => {
+        try {
+          const requestOptions = {
+            method: 'POST',
+            //headers: { 'Content-Type': 'multipart/form-data' },
+            body: dataAI
+          };
+          const response = await fetch(ai_url+'/detect_image', requestOptions);
+          const dataAi = await response.json();
+          if(response.status ===422){
+            swAlert("error",dataAi.message);
+          }else if(response.status ===201||response.status ===200){
+            if(dataAi.success){
+              try {
+                const data = new FormData();
+                data.append('idImage',files);
+                data.append('firstName', values.firstName);
+                data.append('lastName', values.lastName);
+                data.append('email', values.email);
+                data.append('role', "Instructor");
+                data.append('password', values.password);
+                data.append('confirmPassword', values.confirmPassword);
+                const requestOptions = {
+                  method: 'POST',
+                  /*headers: { 'Content-Type': 'multipart/form-data' },*/
+                  body: data
+                };
+                const response = await fetch(back_end_url+'/auth/register', requestOptions);
+                const dataResponse = await response.json();
+                if(response.status ===422){
+                  swAlert("error",dataResponse.message,dataResponse.data[0]);
+                }else if(response.status ===201||response.status ===200){
+                  swAlert("success",dataResponse.message);
+                  await delay(5000);
+                  localStorage.setItem("email", values.email);
+                  localStorage.setItem("resetPassword", "no");
+                  navigate("/verification");
+                }
+
+              } catch (error) {
+                swAlert("global");
+              }
+            }
+          }
+
+        } catch (error) {
+          swAlert("global");
+        }
+      };
+      registerUser();
     },
   });
 
@@ -261,7 +318,6 @@ const SignUpInstructorForm = () => {
           ) : null}
         </div>
         <div className={`${inputClasses} cursor-pointer relative py-2`} onClick={() => {
-            console.log("clicked");
             open();
           }}>
           <img

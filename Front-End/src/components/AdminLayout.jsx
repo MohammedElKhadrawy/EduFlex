@@ -1,10 +1,11 @@
-import { Outlet } from "react-router-dom";
+import {json, Outlet} from "react-router-dom";
 import LogoTin from "../assets/logoTin.png";
 import links from "../assets/admin_icons/links.png";
 import students from "../assets/admin_icons/student.png";
 import instructors from "../assets/admin_icons/instructor.png";
 import courses from "../assets/admin_icons/courses.png";
-import { useState } from 'react';
+import React, {useEffect, useState} from 'react';
+import {getCookie,delay,swAlert} from "../helpers";
 
 const MainLayout = () => {
     const currentStat=sessionStorage.getItem('stat')??"full";
@@ -25,6 +26,33 @@ const MainLayout = () => {
         }
     }
     const pathname = window.location.pathname;
+    useEffect(()=>{
+        if(getCookie('token')&&JSON.parse(getCookie('user')).role==="Admin"){
+            const fetchUserData = async () => {
+                try {
+                    const requestOptions = {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer '+getCookie('token'),
+                        }
+                    };
+                    const back_end_url=import.meta.env.VITE_BACK_END_URL;
+
+                    const response = await fetch(back_end_url+'/users/show-me',requestOptions)
+                    const result = await response.json();
+                    if(response.status===200){
+                        document.cookie="user="+JSON.stringify(result.user)+"; path=/";
+                    }
+                } catch (error) {
+                    swAlert("global");
+                }
+            };
+            fetchUserData();
+        }else{
+            window.location.href="/";
+        }
+    },[]);
     return (
     <div>
         <div className="flex">

@@ -3,6 +3,7 @@ import * as Yup from "yup";
 import { useFormik } from "formik";
 import { useNavigate } from "react-router-dom";
 import backImage from '../../assets/back.png';
+import {delay,swAlert} from "../../helpers";
 
 const SignUpStudentForm = () => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const SignUpStudentForm = () => {
       education: "",
       stage: "",
       level: "",
+      role: "Student",
     },
     validationSchema: Yup.object({
       firstName: Yup.string().required("Please enter your first name"),
@@ -43,14 +45,48 @@ const SignUpStudentForm = () => {
       confirmPassword: Yup.string()
         .required("Please confirm your Password")
         .oneOf([Yup.ref("password")], "Password mismatch"),
-      education: Yup.number().required("Please enter your education"),
-      stage: Yup.number().required("Please enter your stage"),
-      level: Yup.number().required("Please enter your level"),
+      education: Yup.string().required("Please enter your education"),
+
     }),
     onSubmit: (values) => {
-      console.log(values);
-      localStorage.setItem("email", values.email);
-      navigate("/verification");
+      const data = new FormData();
+      if(values.stage!==""){
+        data.append('stage', values.stage);
+      }
+      if(values.level!==""){
+        data.append('level', values.level);
+      }
+      data.append('firstName',values.firstName);
+      data.append('lastName',values.lastName);
+      data.append('email',values.email);
+      data.append('password',values.password);
+      data.append('confirmPassword',values.confirmPassword);
+      data.append('education',values.education);
+      data.append('role',values.role);
+      const requestOptions = {
+        method: 'POST',
+        body: data,
+      };
+      const back_end_url=import.meta.env.VITE_BACK_END_URL;
+      const registerUser = async () => {
+        try {
+          const response = await fetch(back_end_url+'/auth/register', requestOptions);
+          const data = await response.json();
+          if(response.status ===422){
+            swAlert("error",data.message,data.data[0]);
+          }else if(response.status ===201){
+            swAlert("success",data.message+" .. you will be redirect to verification in 5 seconds");
+            await delay(5000);
+            localStorage.setItem("email", values.email);
+            localStorage.setItem("resetPassword", "no");
+            navigate("/verification");
+          }
+
+        } catch (error) {
+          swAlert("global");
+        }
+      };
+      registerUser();
     },
   });
 
@@ -254,9 +290,9 @@ const SignUpStudentForm = () => {
             <option value="" disabled hidden>
               Education
             </option>
-            <option value="1">General</option>
-            <option value="2">Special</option>
-            <option value="3">Graduated</option>
+            <option value="General">General</option>
+            <option value="Special">Special</option>
+            <option value="Graduated">Graduated</option>
           </select>
           {validation.touched.education && validation.errors.education ? (
             <h2 className="text-red-700 mt-1" type="invalid">
@@ -264,7 +300,7 @@ const SignUpStudentForm = () => {
             </h2>
           ) : null}
         </div>
-        {validation.values.education === "1" || validation.values.education === "2" ? (
+        {validation.values.education === "General" || validation.values.education === "Special" ? (
           <>
             <div>
               <select
@@ -276,10 +312,10 @@ const SignUpStudentForm = () => {
                 <option value="" disabled hidden>
                   Stage
                 </option>
-                <option value="1">Primary stage</option>
-                <option value="2">Middle school</option>
-                <option value="3">High school</option>
-                <option value="4">University</option>
+                <option value="Primary stage">Primary stage</option>
+                <option value="Middle school">Middle school</option>
+                <option value="High school">High school</option>
+                <option value="University">University</option>
               </select>
               {validation.touched.stage && validation.errors.stage ? (
                 <h2 className="text-red-700 mt-1" type="invalid">
@@ -287,7 +323,7 @@ const SignUpStudentForm = () => {
                 </h2>
               ) : null}
             </div>
-            {validation.values.stage != "4" ? (
+            {validation.values.stage !== "University" ? (
               <div>
                 <select
                   name="level"
@@ -298,9 +334,9 @@ const SignUpStudentForm = () => {
                   <option value="" disabled hidden>
                     Level
                   </option>
-                  <option value="1">Level One</option>
-                  <option value="2">Level Two</option>
-                  <option value="3">Level Three</option>
+                  <option value="Level one">Level One</option>
+                  <option value="Level two">Level Two</option>
+                  <option value="Level three">Level Three</option>
                 </select>
                 {validation.touched.level && validation.errors.level ? (
                   <h2 className="text-red-700 mt-1" type="invalid">
